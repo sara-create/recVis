@@ -14,7 +14,7 @@ def opts() -> argparse.ArgumentParser:
     parser.add_argument(
         "--data",
         type=str,
-        default="/content/sketch_recvis2024/sketch_recvis2024",
+        default="sketch_recvis2024/sketch_recvis2024",
         metavar="D",
         help="folder where data is located. test_images/ need to be found in the folder",
     )
@@ -34,7 +34,7 @@ def opts() -> argparse.ArgumentParser:
     parser.add_argument(
         "--outfile",
         type=str,
-        default="/content/drive/MyDrive/recVis/recvis24/experiment/kaggle.csv",
+        default="recVis/experiment/kaggle.csv",
         metavar="D",
         help="name of the output csv file",
     )

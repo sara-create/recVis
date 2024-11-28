@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchvision import datasets
+import gc
 
 from model_factory import ModelFactory
 
@@ -15,7 +16,7 @@ def opts() -> argparse.ArgumentParser:
     parser.add_argument(
         "--data",
         type=str,
-        default="/content/sketch_recvis2024/sketch_recvis2024",
+        default="sketch_recvis2024/sketch_recvis2024",
         metavar="D",
         help="folder where data is located. train_images/ and val_images/ need to be found in the folder",
     )
@@ -67,7 +68,7 @@ def opts() -> argparse.ArgumentParser:
     parser.add_argument(
         "--experiment",
         type=str,
-        default="/content/drive/MyDrive/recVis/recvis24/experiment",
+        default="recVis/experiment",
         metavar="E",
         help="folder where experiment outputs are located.",
     )
@@ -77,6 +78,13 @@ def opts() -> argparse.ArgumentParser:
         default=10,
         metavar="NW",
         help="number of workers for data loading",
+    )
+    parser.add_argument(
+        "--initialize",
+        type=str,
+        default=None,
+        metavar="INIT",
+        help="Path to a checkpoint file to initialize the model (e.g., 'best.pth').",
     )
     args = parser.parse_args()
     return args
@@ -213,9 +221,25 @@ def main():
     # Setup optimizer
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
+    if args.initialize is not None:
+        if os.path.isfile(args.initialize):
+            print(f"Loading checkpoint from {args.initialize}...")
+            checkpoint = torch.load(args.initialize)
+            optimizer.load_state_dict(checkpoint) 
+            start_epoch = checkpoint["epoch"] + 1  
+            best_val_loss = checkpoint["best_val_loss"]  
+            print(f"Resuming from epoch {start_epoch} with best validation loss {best_val_loss:.4f}")
+        else:
+            print(f"Checkpoint file {args.initialize} not found. Exiting.")
+            return
+    else:
+        print("No checkpoint provided, starting from scratch.")
+        start_epoch = 1
+        best_val_loss = 1e8
+
     # Loop over the epochs
     best_val_loss = 1e8
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         # training loop
         train(model, optimizer, train_loader, use_cuda, epoch, args)
         # validation loop
@@ -231,11 +255,14 @@ def main():
         print(
             "Saved model to "
             + model_file
-            + f". You can run `python evaluate.py --model_name {args.model_name} --model "
+            + f". You can run python evaluate.py --model_name {args.model_name} --model "
             + best_model_file
-            + "` to generate the Kaggle formatted csv file\n"
+            + " to generate the Kaggle formatted csv file\n"
         )
 
 
 if __name__ == "__main__":
+
+    gc.collect()
+    torch.cuda.empty_cache()
     main()
